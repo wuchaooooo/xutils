@@ -87,7 +87,7 @@ public class HttpClientUtilsImpl implements HttpClientUtils {
             //默认requestConfig
             requestConfig = RequestConfig.custom()
                     .setConnectionRequestTimeout(DEFAULT_CONNECTION_REQUEST_TIMEOUT)
-                    .setConnectTimeout(DEFAULT_SOCKET_TIMEOUT)
+                    .setConnectTimeout(DEFAULT_CONNECTION_TIMEOUT)
                     .setSocketTimeout(DEFAULT_SOCKET_TIMEOUT)
                     .build();
 
