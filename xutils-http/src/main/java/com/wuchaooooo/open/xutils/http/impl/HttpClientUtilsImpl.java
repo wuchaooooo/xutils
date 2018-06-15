@@ -13,7 +13,12 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.utils.URLEncodedUtils;
+import org.apache.http.config.Registry;
+import org.apache.http.config.RegistryBuilder;
+import org.apache.http.conn.socket.ConnectionSocketFactory;
+import org.apache.http.conn.socket.PlainConnectionSocketFactory;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
+import org.apache.http.conn.ssl.TrustSelfSignedStrategy;
 import org.apache.http.conn.ssl.TrustStrategy;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
@@ -22,12 +27,16 @@ import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.ssl.SSLContextBuilder;
+import org.apache.http.util.EntityUtils;
 
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSession;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
+import java.security.KeyManagementException;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.Collections;
@@ -36,23 +45,63 @@ import java.util.Map;
 
 public class HttpClientUtilsImpl implements HttpClientUtils {
 
+    //默认Http client
     private static HttpClient client;
 
+    private static RequestConfig requestConfig;
+
     //默认连接超时时间(ms)
-    private static final Integer DEFAULT_CONNECTION_TIME_OUT = 100000;
+    private static final Integer DEFAULT_CONNECTION_TIMEOUT = 100000;
+
+    //默认请求连接超时时间
+    private static final Integer DEFAULT_CONNECTION_REQUEST_TIMEOUT = 100000;
 
     //默认读取超时时间(ms)
-    private static final Integer DEFAULT_SOCKET_TIME_OUT = 200000;
+    private static final Integer DEFAULT_SOCKET_TIMEOUT = 200000;
 
     //默认字符集
     private static final String DEFAULT_CHART_SET = "UTF-8";
 
-    //构建默认的http client
+    //构建默认的http client (支持http和https请求)
     static {
-        PoolingHttpClientConnectionManager cm = new PoolingHttpClientConnectionManager();
-        cm.setMaxTotal(128);
-        cm.setDefaultMaxPerRoute(128);
-        client = HttpClients.custom().setConnectionManager(cm).build();
+        try {
+            SSLContextBuilder builder = new SSLContextBuilder();
+            builder.loadTrustMaterial(null, new TrustSelfSignedStrategy());
+            SSLConnectionSocketFactory sslsf = new SSLConnectionSocketFactory(builder.build());
+
+            //同时支持http和https请求
+            Registry<ConnectionSocketFactory> socketFactoryRegistry = RegistryBuilder.
+                    <ConnectionSocketFactory> create()
+                    .register("http", PlainConnectionSocketFactory.getSocketFactory())
+                    .register("https", sslsf)
+                    .build();
+
+            //初始化连接管理器
+            PoolingHttpClientConnectionManager cm = new PoolingHttpClientConnectionManager(socketFactoryRegistry);
+            //最大连接数，
+            //TODO 将连接数写在配置文件读取
+            cm.setMaxTotal(128);
+            //最大路由
+            cm.setDefaultMaxPerRoute(128);
+
+            //默认requestConfig
+            requestConfig = RequestConfig.custom()
+                    .setConnectionRequestTimeout(DEFAULT_CONNECTION_REQUEST_TIMEOUT)
+                    .setConnectTimeout(DEFAULT_SOCKET_TIMEOUT)
+                    .setSocketTimeout(DEFAULT_SOCKET_TIMEOUT)
+                    .build();
+
+            client = HttpClients.custom()
+                    .setConnectionManager(cm)
+                    .setDefaultRequestConfig(requestConfig)
+                    .build();
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        } catch (KeyStoreException e) {
+            e.printStackTrace();
+        } catch (KeyManagementException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
@@ -78,10 +127,7 @@ public class HttpClientUtilsImpl implements HttpClientUtils {
             get = new HttpGet(url);
 
             //设置HTTP Request参数
-            RequestConfig.Builder customRequestConfig = RequestConfig.custom();
-            customRequestConfig.setConnectTimeout(DEFAULT_CONNECTION_TIME_OUT);
-            customRequestConfig.setSocketTimeout(DEFAULT_SOCKET_TIME_OUT);
-            get.setConfig(customRequestConfig.build());
+            get.setConfig(requestConfig);
 
             //请求头
             if (!MapUtils.isEmpty(header)) {
@@ -137,10 +183,7 @@ public class HttpClientUtilsImpl implements HttpClientUtils {
             post = new HttpPost(url);
 
             //设置HTTP Request参数
-            RequestConfig.Builder customRequestConfig = RequestConfig.custom();
-            customRequestConfig.setConnectTimeout(DEFAULT_CONNECTION_TIME_OUT);
-            customRequestConfig.setSocketTimeout(DEFAULT_SOCKET_TIME_OUT);
-            post.setConfig(customRequestConfig.build());
+            post.setConfig(requestConfig);
 
             //请求头
             if (!MapUtils.isEmpty(header)) {
@@ -196,10 +239,7 @@ public class HttpClientUtilsImpl implements HttpClientUtils {
             put = new HttpPut(url);
 
             //设置HTTP Request参数
-            RequestConfig.Builder customRequestConfig = RequestConfig.custom();
-            customRequestConfig.setConnectTimeout(DEFAULT_CONNECTION_TIME_OUT);
-            customRequestConfig.setSocketTimeout(DEFAULT_SOCKET_TIME_OUT);
-            put.setConfig(customRequestConfig.build());
+            put.setConfig(requestConfig);
 
             //请求头
             if (!MapUtils.isEmpty(header)) {
@@ -234,6 +274,7 @@ public class HttpClientUtilsImpl implements HttpClientUtils {
             throw new IOException();
         } finally {
             put.releaseConnection();
+            EntityUtils.consume(response.getEntity());
             if (url.startsWith("https") && client instanceof CloseableHttpClient) {
                 ((CloseableHttpClient) client).close();
             }
@@ -255,10 +296,7 @@ public class HttpClientUtilsImpl implements HttpClientUtils {
             delete = new HttpDelete(url);
 
             //设置HTTP Request参数
-            RequestConfig.Builder customRequestConfig = RequestConfig.custom();
-            customRequestConfig.setConnectTimeout(DEFAULT_CONNECTION_TIME_OUT);
-            customRequestConfig.setSocketTimeout(DEFAULT_SOCKET_TIME_OUT);
-            delete.setConfig(customRequestConfig.build());
+            delete.setConfig(requestConfig);
 
             //请求头
             if (!MapUtils.isEmpty(header)) {
