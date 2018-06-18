@@ -3,6 +3,7 @@ package com.wuchaooooo.open.xutils.http.impl;
 import com.wuchaooooo.open.xutils.http.HttpClientUtils;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
@@ -42,6 +43,7 @@ import java.security.cert.X509Certificate;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 public class HttpClientUtilsImpl implements HttpClientUtils {
 
@@ -50,13 +52,13 @@ public class HttpClientUtilsImpl implements HttpClientUtils {
 
     private static RequestConfig requestConfig;
 
-    //默认连接超时时间(ms)
+    //连接超时时间(ms)
     private static final Integer DEFAULT_CONNECTION_TIMEOUT = 100000;
 
-    //默认请求连接超时时间
+    //从池中获取连接超时时间
     private static final Integer DEFAULT_CONNECTION_REQUEST_TIMEOUT = 100000;
 
-    //默认读取超时时间(ms)
+    //读取超时时间(ms)
     private static final Integer DEFAULT_SOCKET_TIMEOUT = 200000;
 
     //默认字符集
@@ -71,7 +73,7 @@ public class HttpClientUtilsImpl implements HttpClientUtils {
 
             //同时支持http和https请求
             Registry<ConnectionSocketFactory> socketFactoryRegistry = RegistryBuilder.
-                    <ConnectionSocketFactory> create()
+                    <ConnectionSocketFactory>create()
                     .register("http", PlainConnectionSocketFactory.getSocketFactory())
                     .register("https", sslsf)
                     .build();
@@ -137,14 +139,8 @@ public class HttpClientUtilsImpl implements HttpClientUtils {
             }
 
             //执行请求
-            if (url.startsWith("https")) {
-                client = createSSLInsecureClient();
-                response = client.execute(get);
-            } else {
-                //执行http请求
-                client = HttpClientUtilsImpl.client;
-                response = client.execute(get);
-            }
+            client = HttpClientUtilsImpl.client;
+            response = client.execute(get);
 
             String responseBody = IOUtils.toString(response.getEntity().getContent(), DEFAULT_CHART_SET);
             if (!StringUtils.isEmpty(responseBody)) {
@@ -152,12 +148,11 @@ public class HttpClientUtilsImpl implements HttpClientUtils {
                 //打印相关日志
             }
             return responseBody;
-        } catch (GeneralSecurityException e) {
-            throw new IOException();
+        } catch (IOException e) {
+            throw e;
         } finally {
-            get.releaseConnection();
-            if (url.startsWith("https") && client instanceof CloseableHttpClient) {
-                ((CloseableHttpClient) client).close();
+            if (get != null) {
+                get.releaseConnection();
             }
         }
 
@@ -199,14 +194,9 @@ public class HttpClientUtilsImpl implements HttpClientUtils {
             }
 
             //执行请求
-            if (url.startsWith("https")) {
-                client = createSSLInsecureClient();
-                response = client.execute(post);
-            } else {
-                //执行http请求
-                client = HttpClientUtilsImpl.client;
-                response = client.execute(post);
-            }
+            client = HttpClientUtilsImpl.client;
+            response = client.execute(post);
+
 
             String responseBody = IOUtils.toString(response.getEntity().getContent(), DEFAULT_CHART_SET);
             if (!StringUtils.isEmpty(responseBody)) {
@@ -214,12 +204,11 @@ public class HttpClientUtilsImpl implements HttpClientUtils {
                 //打印相关日志
             }
             return responseBody;
-        } catch (GeneralSecurityException e) {
-            throw new IOException();
+        } catch (IOException e) {
+            throw e;
         } finally {
-            post.releaseConnection();
-            if (url.startsWith("https") && client instanceof CloseableHttpClient) {
-                ((CloseableHttpClient) client).close();
+            if (post != null) {
+                post.releaseConnection();
             }
         }
     }
@@ -255,14 +244,8 @@ public class HttpClientUtilsImpl implements HttpClientUtils {
             }
 
             //执行请求
-            if (url.startsWith("https")) {
-                client = createSSLInsecureClient();
-                response = client.execute(put);
-            } else {
-                //执行http请求
-                client = HttpClientUtilsImpl.client;
-                response = client.execute(put);
-            }
+            client = HttpClientUtilsImpl.client;
+            response = client.execute(put);
 
             String responseBody = IOUtils.toString(response.getEntity().getContent(), DEFAULT_CHART_SET);
             if (!StringUtils.isEmpty(responseBody)) {
@@ -270,13 +253,11 @@ public class HttpClientUtilsImpl implements HttpClientUtils {
                 //打印相关日志
             }
             return responseBody;
-        } catch (GeneralSecurityException e) {
-            throw new IOException();
+        } catch (IOException e) {
+            throw e;
         } finally {
-            put.releaseConnection();
-            EntityUtils.consume(response.getEntity());
-            if (url.startsWith("https") && client instanceof CloseableHttpClient) {
-                ((CloseableHttpClient) client).close();
+            if (put != null) {
+                put.releaseConnection();
             }
         }
     }
@@ -306,14 +287,8 @@ public class HttpClientUtilsImpl implements HttpClientUtils {
             }
 
             //执行请求
-            if (url.startsWith("https")) {
-                client = createSSLInsecureClient();
-                response = client.execute(delete);
-            } else {
-                //执行http请求
-                client = HttpClientUtilsImpl.client;
-                response = client.execute(delete);
-            }
+            client = HttpClientUtilsImpl.client;
+            response = client.execute(delete);
 
             String responseBody = IOUtils.toString(response.getEntity().getContent(), DEFAULT_CHART_SET);
             if (!StringUtils.isEmpty(responseBody)) {
@@ -321,12 +296,11 @@ public class HttpClientUtilsImpl implements HttpClientUtils {
                 //打印相关日志
             }
             return responseBody;
-        } catch (GeneralSecurityException e) {
-            throw new IOException();
+        } catch (IOException e) {
+            throw e;
         } finally {
-            delete.releaseConnection();
-            if (url.startsWith("https") && client instanceof CloseableHttpClient) {
-                ((CloseableHttpClient) client).close();
+            if (delete != null) {
+                delete.releaseConnection();
             }
         }
     }
@@ -334,22 +308,5 @@ public class HttpClientUtilsImpl implements HttpClientUtils {
     @Override
     public String delete(String url) throws IOException {
         return delete(url, null);
-    }
-
-    public static CloseableHttpClient createSSLInsecureClient() throws GeneralSecurityException {
-        SSLContext sslContext = new SSLContextBuilder().loadTrustMaterial(null, new TrustStrategy() {
-
-            public boolean isTrusted(X509Certificate[] chain, String authType) throws CertificateException {
-                return true;
-            }
-        }).build();
-        SSLConnectionSocketFactory sslsf = new SSLConnectionSocketFactory(sslContext, new HostnameVerifier() {
-
-            @Override
-            public boolean verify(String hostname, SSLSession session) {
-                return true;
-            }
-        });
-        return HttpClients.custom().setSSLSocketFactory(sslsf).build();
     }
 }
