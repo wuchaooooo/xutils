@@ -13,7 +13,7 @@
         <module>xutils-date</module>
         <module>xutils-json</module>
         <module>xutils-io</module>
-        <module>xutils-utils</module>
+        <module>xutils-common</module>
     </modules>
 
     <dependencyManagement>
