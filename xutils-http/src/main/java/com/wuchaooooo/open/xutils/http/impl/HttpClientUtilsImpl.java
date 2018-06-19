@@ -3,7 +3,6 @@ package com.wuchaooooo.open.xutils.http.impl;
 import com.wuchaooooo.open.xutils.http.HttpClientUtils;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
@@ -20,30 +19,20 @@ import org.apache.http.conn.socket.ConnectionSocketFactory;
 import org.apache.http.conn.socket.PlainConnectionSocketFactory;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apache.http.conn.ssl.TrustSelfSignedStrategy;
-import org.apache.http.conn.ssl.TrustStrategy;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.ssl.SSLContextBuilder;
 import org.apache.http.util.EntityUtils;
-
-import javax.net.ssl.HostnameVerifier;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSession;
 import java.io.IOException;
-import java.security.GeneralSecurityException;
 import java.security.KeyManagementException;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
-import java.security.cert.CertificateException;
-import java.security.cert.X509Certificate;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 public class HttpClientUtilsImpl implements HttpClientUtils {
 
@@ -151,7 +140,12 @@ public class HttpClientUtilsImpl implements HttpClientUtils {
         } catch (IOException e) {
             throw e;
         } finally {
+            if (response != null) {
+                //关闭 InputStream
+                EntityUtils.consume(response.getEntity());
+            }
             if (get != null) {
+                //将连接放回连接池
                 get.releaseConnection();
             }
         }
@@ -207,7 +201,12 @@ public class HttpClientUtilsImpl implements HttpClientUtils {
         } catch (IOException e) {
             throw e;
         } finally {
+            if (response != null) {
+                //关闭 InputStream
+                EntityUtils.consume(response.getEntity());
+            }
             if (post != null) {
+                //将连接放回连接池
                 post.releaseConnection();
             }
         }
@@ -256,7 +255,12 @@ public class HttpClientUtilsImpl implements HttpClientUtils {
         } catch (IOException e) {
             throw e;
         } finally {
+            if (response != null) {
+                //关闭 InputStream
+                EntityUtils.consume(response.getEntity());
+            }
             if (put != null) {
+                //将连接放回连接池
                 put.releaseConnection();
             }
         }
@@ -299,7 +303,12 @@ public class HttpClientUtilsImpl implements HttpClientUtils {
         } catch (IOException e) {
             throw e;
         } finally {
+            if (response != null) {
+                //关闭 InputStream
+                EntityUtils.consume(response.getEntity());
+            }
             if (delete != null) {
+                //将连接放回连接池
                 delete.releaseConnection();
             }
         }

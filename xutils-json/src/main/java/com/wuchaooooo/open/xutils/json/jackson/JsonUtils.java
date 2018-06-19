@@ -14,7 +14,7 @@ import java.util.Map;
  */
 public class JsonUtils {
 
-    public static ObjectMapper defaultObjectMapper = new ObjectMapper();
+    private static ObjectMapper defaultObjectMapper = new ObjectMapper();
 
     /**
      * json对象字符串 转成 java对象
@@ -36,13 +36,13 @@ public class JsonUtils {
      * @return 反序列化后的对象
      */
     public static <T> T json2Obj(String jsonObjectStr, Class<T> clazz, ObjectMapper objectMapper) {
-        T resut = null;
+        T result = null;
         try {
-            resut = objectMapper.readValue(jsonObjectStr, clazz);
+            result = objectMapper.readValue(jsonObjectStr, clazz);
         } catch (IOException e) {
             //TODO
         }
-        return resut;
+        return result;
     }
 
     /**
